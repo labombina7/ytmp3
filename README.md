@@ -28,8 +28,8 @@ Este proyecto permite descargar canciones, álbumes o listas de reproducción de
 
 ## 🔧 Uso local
 
-```bash
-git clone https://github.com/tu-usuario/ytmp3-downloader.git
-cd ytmp3-downloader
+```bash 
+git clone https://github.com/labombina7/ytmp3.git
+cd ytmp3
 docker-compose build
 docker-compose up -d
