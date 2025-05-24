@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>YT Downloader</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; max-width: 600px; margin: auto; }
+    input[type="text"] { width: 100%; padding: 0.5em; }
+    button { padding: 0.5em 1em; margin-right: 1em; }
+    #status { margin-top: 1em; font-weight: bold; }
+    ul { margin-top: 1em; padding-left: 1.2em; }
+    li.success { color: green; }
+    li.processing { color: orange; }
+    li.error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Descargar desde YouTube</h1>
+
+  <form id="form">
+    <input type="text" id="url" placeholder="URL de video o playlist" required /><br><br>
+    <button type="submit" data-format="mp3">Descargar MP3</button>
+    <button type="submit" data-format="video">Descargar Video</button>
+  </form>
+
+  <p id="status"></p>
+  <ul id="result-list"></ul>
+
+  <script>
+    const form = document.getElementById('form');
+    const urlInput = document.getElementById('url');
+    const statusEl = document.getElementById('status');
+    const resultList = document.getElementById('result-list');
+    const entries = {};  // Mapa url → li
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const format = e.submitter.dataset.format;
+      const url = urlInput.value.trim();
+
+      if (!/^https?:\/\//i.test(url)) {
+        statusEl.innerText = "❌ URL no válida";
+        return;
+      }
+
+      statusEl.innerText = "⏳ Procesando, espera...";
+
+      try {
+        const res = await fetch('/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, format })
+        });
+
+        const data = await res.json();
+        statusEl.innerText = `✅ Añadido ${data.videos.length} elemento(s) a la cola`;
+
+        data.videos.forEach(video => {
+          const li = document.createElement('li');
+          li.textContent = `⏳ En cola: ${video.title}`;
+          li.className = 'processing';
+          resultList.appendChild(li);
+          entries[video.id] = li;
+          entries[video.url] = li;
+        });
+      } catch (err) {
+        statusEl.innerText = "";
+        const li = document.createElement('li');
+        li.textContent = `${url} → ❌ Error de conexión`;
+        li.className = 'error';
+        resultList.appendChild(li);
+      }
+    });
+
+    // Escuchar progreso por SSE
+    const evtSource = new EventSource("/stream");
+
+    evtSource.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        const li = entries[data.id] || entries[data.url];
+        if (li) {
+          if (data.status === "descargando") {
+            li.textContent = `⬇️ Descargando: ${data.title}`;
+            li.className = 'processing';
+          } else if (data.status === "completado") {
+            li.textContent = `✅ Descargado: ${data.title}`;
+            li.className = 'success';
+          }
+        }
+      } catch (e) {
+        console.warn("Evento malformado", event.data);
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+flask
+ytmusicapi==1.4.2

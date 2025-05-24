@@ -1,0 +1,11 @@
+services:
+  ytmp3-flask:
+    build: .
+    container_name: ytmp3-flask
+    ports:
+      - "5558:5558"
+    volumes:
+      - /Volumes/Music/downloads:/app/downloads
+    restart: unless-stopped
+    #command: >
+     # sh -c "python app.py & while true; do python sync_ytmusic.py && sleep 30; done"
